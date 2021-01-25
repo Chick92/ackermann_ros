@@ -10,6 +10,11 @@ long old_position = 0;
 double Setpoint, Output;
 double Input = 0;
 double Kp=1, Ki=0.5, Kd=0.01;
+String input_vel = "";
+String input_twist = "";         // a String to hold incoming data
+bool stringComplete = false;  // whether the string is complete
+bool twist_flag = false;
+
 
 BTS7960 motorController(6, 5, 10, 11); //en_l en_r l_pwm r_pwm
 Encoder myEnc(2, 3);
@@ -37,31 +42,78 @@ double calculate_rpm(){
 
 void setup(){
    Serial.begin(9600);
+   input_vel.reserve(100);
+   input_twist.reserve(100);
    myservo.attach(9);
+   
    myservo.write(90); // 57 = full left, 123 = full right, 90 = middle.
    motorController.Enable();
-   Setpoint = 6;
+   Setpoint = 0;
    myPID.SetSampleTime(20);
    myPID.SetMode(AUTOMATIC);
+   myPID.SetOutputLimits(-255,255);
 }
 
 void loop(){
    //double RPM;
    //int speed;
-   Input = calculate_rpm();
-   myPID.Compute();
-   if (Setpoint >= 0){
-      motorController.TurnLeft(Output);
-   }
-   else{
-      motorController.TurnRight(Output);
-   }
-   Serial.print("PWM:");
-   Serial.print(Output);
-   Serial.print(",");
-   Serial.print("RPM:");
-   Serial.println(Input);
-   
-   //motorController.Stop();
-   //motorController.Disable();
+    int twist = 90;
+    int vel = 0;
+    
+    while(1){
+        
+        if (stringComplete) {
+            vel = input_vel.toInt();
+            twist = input_twist.toInt();
+            input_vel = "";
+            input_twist = "";
+            stringComplete = false;
+        }
+    
+        myservo.write(twist);
+        
+        Setpoint = vel;
+        Input = calculate_rpm();
+        myPID.Compute();
+        
+        if (Output >= 0){
+            motorController.TurnLeft(Output);
+        }
+        else{
+            motorController.TurnRight(sqrt(Output^2));
+        }
+        
+        Serial.print("Output_PWM:");
+        Serial.print(Output);
+        Serial.print(",");
+        Serial.print("Input_RPM:");
+        Serial.println(Input);
+        Serial.print("Setpoint:");
+        Serial.println(Setpoint);
+        //motorController.Stop();
+        //motorController.Disable();
+    }
+}
+
+void serialEvent() {
+    while (Serial.available()) {
+        // get the new byte:
+        char inChar = (char)Serial.read();
+        
+        if (inChar =='t'){
+            twist_flag = true;
+        }
+        
+        if (twist_flag == false){
+            input_vel += inChar;
+        }
+        else{
+            input_twist += inChar;
+        }
+        // if the incoming character is a newline, set a flag so the main loop can
+        // do something about it:
+        if (inChar == '\n') {
+            stringComplete = true;
+        }
+    }
 }
