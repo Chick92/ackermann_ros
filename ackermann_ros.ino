@@ -63,6 +63,8 @@ void loop(){
     while(1){
         
         if (stringComplete) {
+            Serial.println(input_vel);
+            Serial.println(input_twist);
             vel = input_vel.toInt();
             twist = input_twist.toInt();
             input_vel = "";
@@ -80,16 +82,17 @@ void loop(){
             motorController.TurnLeft(Output);
         }
         else{
-            motorController.TurnRight(sqrt(Output^2));
+            motorController.TurnRight(sqrt(Output * Output));
         }
         
-        Serial.print("Output_PWM:");
-        Serial.print(Output);
-        Serial.print(",");
-        Serial.print("Input_RPM:");
-        Serial.println(Input);
-        Serial.print("Setpoint:");
-        Serial.println(Setpoint);
+        //Serial.print("Output_PWM:");
+        //Serial.print(Output);
+        //Serial.print(",");
+        //Serial.print("Input_RPM:");
+        //Serial.print(Input);
+        //Serial.print(",");
+        //Serial.print("Setpoint:");
+        //Serial.println(Setpoint);
         //motorController.Stop();
         //motorController.Disable();
     }
@@ -113,6 +116,7 @@ void serialEvent() {
         // if the incoming character is a newline, set a flag so the main loop can
         // do something about it:
         if (inChar == '\n') {
+            Serial.println("string complete");
             stringComplete = true;
         }
     }
