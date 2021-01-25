@@ -1,4 +1,4 @@
-#include "BTS7960.h"
+#include <BTS7960.h>
 #include <Encoder.h>
 #include <PID_v1.h>
 #include <Servo.h>
@@ -14,6 +14,9 @@ String input_vel = "";
 String input_twist = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 bool twist_flag = false;
+
+int twist = 90;
+int vel = 0;
 
 
 BTS7960 motorController(6, 5, 10, 11); //en_l en_r l_pwm r_pwm
@@ -42,6 +45,7 @@ double calculate_rpm(){
 
 void setup(){
    Serial.begin(9600);
+   Serial.println("Hello Ben");
    input_vel.reserve(100);
    input_twist.reserve(100);
    myservo.attach(9);
@@ -57,10 +61,10 @@ void setup(){
 void loop(){
    //double RPM;
    //int speed;
-    int twist = 90;
-    int vel = 0;
+   // int twist = 90;
+   // int vel = 0;
     
-    while(1){
+    //while(1){
         
         if (stringComplete) {
             Serial.println(input_vel);
@@ -95,7 +99,7 @@ void loop(){
         //Serial.println(Setpoint);
         //motorController.Stop();
         //motorController.Disable();
-    }
+    //}
 }
 
 void serialEvent() {
@@ -105,6 +109,7 @@ void serialEvent() {
         
         if (inChar =='t'){
             twist_flag = true;
+            break;
         }
         
         if (twist_flag == false){
