@@ -15,6 +15,9 @@ String input_twist = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 bool twist_flag = false;
 
+double wheel_base_length = 50;
+double wheel_base_width = 20;
+
 int twist = 90;
 int vel = 0;
 
@@ -42,10 +45,15 @@ double calculate_rpm(){
    return RPM;
 }
 
+int convert_steering_angle(int twist, int vel){
+    int phi;
+    phi = arctan(twist/(vel/wheel_base_length)) + 90;
+    return phi;
+}
 
 void setup(){
    Serial.begin(9600);
-   Serial.println("Hello Ben");
+   //Serial.println("Hello Ben");
    input_vel.reserve(100);
    input_twist.reserve(100);
    myservo.attach(9);
@@ -59,6 +67,7 @@ void setup(){
 }
 
 void loop(){
+    char debug = 2;
    //double RPM;
    //int speed;
    // int twist = 90;
@@ -76,7 +85,7 @@ void loop(){
             stringComplete = false;
         }
     
-        myservo.write(twist);
+        myservo.write(convet_steering_angle(twist,vel));
         
         Setpoint = vel;
         Input = calculate_rpm();
@@ -89,14 +98,21 @@ void loop(){
             motorController.TurnRight(sqrt(Output * Output));
         }
         
-        //Serial.print("Output_PWM:");
-        //Serial.print(Output);
-        //Serial.print(",");
-        //Serial.print("Input_RPM:");
-        //Serial.print(Input);
-        //Serial.print(",");
-        //Serial.print("Setpoint:");
-        //Serial.println(Setpoint);
+        if (debug == 1){
+            Serial.print("Output_PWM:");
+            Serial.print(Output);
+            Serial.print(",");
+            Serial.print("Input_RPM:");
+            Serial.print(Input);
+            Serial.print(",");
+            Serial.print("Setpoint:");
+            Serial.println(Setpoint);
+        }
+        
+        if (debug == 2){
+            Serial.print("Ticks:");
+            Serial.println(myEnc.read());
+        }
         //motorController.Stop();
         //motorController.Disable();
     //}
@@ -106,6 +122,11 @@ void serialEvent() {
     while (Serial.available()) {
         // get the new byte:
         char inChar = (char)Serial.read();
+        
+        if (inChar == '\n') {
+            Serial.println("string complete");
+            stringComplete = true;
+            break;
         
         if (inChar =='t'){
             twist_flag = true;
@@ -119,10 +140,8 @@ void serialEvent() {
             input_twist += inChar;
         }
         // if the incoming character is a newline, set a flag so the main loop can
-        // do something about it:
-        if (inChar == '\n') {
-            Serial.println("string complete");
-            stringComplete = true;
+        // do something about:
+        
         }
     }
 }
