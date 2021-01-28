@@ -47,7 +47,7 @@ double calculate_rpm(){
 
 int convert_steering_angle(int twist, int vel){
     int phi;
-    phi = arctan(twist/(vel/wheel_base_length)) + 90;
+    phi = atan(twist/(vel/wheel_base_length)) + 90;
     return phi;
 }
 
@@ -85,7 +85,7 @@ void loop(){
             stringComplete = false;
         }
     
-        myservo.write(convet_steering_angle(twist,vel));
+        myservo.write(convert_steering_angle(twist, vel));
         
         Setpoint = vel;
         Input = calculate_rpm();
