@@ -9,20 +9,21 @@ long old_position = 0;
 
 double Setpoint, Output;
 double Input = 0;
-double Kp=1, Ki=0.5, Kd=0.01;
+double Kp=1.3, Ki=15, Kd=0.01;
 String input_vel = "";
 String input_twist = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 bool twist_flag = false;
 
-double wheel_base_length = 50;
-double wheel_base_width = 20;
+double wheel_base_length = 0.34;
+double wheel_base_width = 0.22;
+double wheel_circumfrance = 0.4273;
 
-int twist = 90;
-int vel = 0;
+double twist = 0.2;
+double vel = 0.25;
 
 
-BTS7960 motorController(6, 5, 10, 11); //en_l en_r l_pwm r_pwm
+BTS7960 motorController(6, 4, 5, 11); //en_l en_r l_pwm r_pwm
 Encoder myEnc(2, 3);
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 Servo myservo;
@@ -45,17 +46,25 @@ double calculate_rpm(){
    return RPM;
 }
 
-int convert_steering_angle(int twist, int vel){
-    int phi;
-    phi = atan(twist/(vel/wheel_base_length)) + 90;
-    return phi;
+double convert_steering_angle(double twist, double vel){
+    double phi;
+    double phi_deg;
+    phi = atan(-twist/(vel/wheel_base_length));
+    phi_deg = (phi * 57296 / 1000) + 90;
+    return phi_deg;
+}
+
+double covert_vel_rpm(double vel){
+  double RPM; 
+  RPM = (vel / wheel_circumfrance) * 60;
+  return RPM;
 }
 
 void setup(){
    Serial.begin(9600);
    //Serial.println("Hello Ben");
-   input_vel.reserve(100);
-   input_twist.reserve(100);
+   //input_vel.reserve(100);
+   //input_twist.reserve(100);
    myservo.attach(9);
    
    myservo.write(90); // 57 = full left, 123 = full right, 90 = middle.
@@ -67,81 +76,39 @@ void setup(){
 }
 
 void loop(){
-    char debug = 2;
-   //double RPM;
-   //int speed;
-   // int twist = 90;
-   // int vel = 0;
-    
-    //while(1){
-        
-        if (stringComplete) {
-            Serial.println(input_vel);
-            Serial.println(input_twist);
-            vel = input_vel.toInt();
-            twist = input_twist.toInt();
-            input_vel = "";
-            input_twist = "";
-            stringComplete = false;
-        }
-    
-        myservo.write(convert_steering_angle(twist, vel));
-        
-        Setpoint = vel;
-        Input = calculate_rpm();
-        myPID.Compute();
-        
-        if (Output >= 0){
-            motorController.TurnLeft(Output);
-        }
-        else{
-            motorController.TurnRight(sqrt(Output * Output));
-        }
-        
-        if (debug == 1){
-            Serial.print("Output_PWM:");
-            Serial.print(Output);
-            Serial.print(",");
-            Serial.print("Input_RPM:");
-            Serial.print(Input);
-            Serial.print(",");
-            Serial.print("Setpoint:");
-            Serial.println(Setpoint);
-        }
-        
-        if (debug == 2){
-            Serial.print("Ticks:");
-            Serial.println(myEnc.read());
-        }
-        //motorController.Stop();
-        //motorController.Disable();
-    //}
-}
+  char debug = 1;
+  double OutputMag;
 
-void serialEvent() {
-    while (Serial.available()) {
-        // get the new byte:
-        char inChar = (char)Serial.read();
+  
+
+  myservo.write(convert_steering_angle(twist, vel));
         
-        if (inChar == '\n') {
-            Serial.println("string complete");
-            stringComplete = true;
-            break;
+  Setpoint = covert_vel_rpm(vel);
+  Input = calculate_rpm();
+  myPID.Compute();
+
+
+  if (0 > Setpoint){
+    motorController.TurnLeft(-Output); 
+  }
+  else{
+    motorController.TurnRight(Output); // forwards
+  }
+       
+  if (debug == 1){
+    Serial.print("Output_PWM:");
+    Serial.print(Output);
+    Serial.print(",");
+    Serial.print("Input_RPM:");
+    Serial.print(Input);
+    Serial.print(",");
+    Serial.print("Setpoint:");
+    Serial.println(Setpoint);
+  }
         
-        if (inChar =='t'){
-            twist_flag = true;
-            break;
-        }
-        
-        if (twist_flag == false){
-            input_vel += inChar;
-        }
-        else{
-            input_twist += inChar;
-        }
-        // if the incoming character is a newline, set a flag so the main loop can
-        // do something about:
-        
-        }
-    }
+  if (debug == 2){
+    Serial.print("Ticks:");
+    Serial.println(myEnc.read());
+  }
+  
 }
