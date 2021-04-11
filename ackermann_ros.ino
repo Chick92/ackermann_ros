@@ -1,3 +1,8 @@
+#include <ros.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Empty.h>
+#include <geometry_msgs/Twist.h>
+
 #include <BTS7960.h>
 #include <Encoder.h>
 #include <PID_v1.h>
@@ -18,7 +23,7 @@ bool twist_flag = false;
 double wheel_base_length = 50;
 double wheel_base_width = 20;
 
-int twist = 90;
+int twist = 0;
 int vel = 0;
 
 
@@ -26,6 +31,10 @@ BTS7960 motorController(6, 5, 10, 11); //en_l en_r l_pwm r_pwm
 Encoder myEnc(2, 3);
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 Servo myservo;
+
+ros::NodeHandle  nh;
+
+ros::Subscriber<geometry_msgs::Twist> sub("/cmd_vel", cmd_vel_cb);
 
 double calculate_rpm(){
    long new_position = myEnc.read();
@@ -52,96 +61,46 @@ int convert_steering_angle(int twist, int vel){
 }
 
 void setup(){
-   Serial.begin(9600);
-   //Serial.println("Hello Ben");
-   input_vel.reserve(100);
-   input_twist.reserve(100);
-   myservo.attach(9);
-   
-   myservo.write(90); // 57 = full left, 123 = full right, 90 = middle.
-   motorController.Enable();
-   Setpoint = 0;
-   myPID.SetSampleTime(20);
-   myPID.SetMode(AUTOMATIC);
-   myPID.SetOutputLimits(-255,255);
+    input_vel.reserve(100);
+    input_twist.reserve(100);
+    myservo.attach(9);
+    myservo.write(90); // 57 = full left, 123 = full right, 90 = middle.
+    motorController.Enable();
+    Setpoint = 0;
+    myPID.SetSampleTime(20);
+    myPID.SetMode(AUTOMATIC);
+    myPID.SetOutputLimits(-255,255);
+    nh.initNode();
+    nh.subscribe(sub);
 }
+
+
+void cmd_vel_cb(const geometry_msgs::Twist& cmd_vel_msg){
+    //0.4273 is circumfrance
+    //convert vel to rpm
+    //convert steering angle from radians to degrees
+    vel  = int((cmd_vel_msg.linear.x / 0.4273) * 60);
+    twist = int(cmd_vel_msg.angular.z * 57.296);//convert to degrees
+}
+
+
 
 void loop(){
-    char debug = 2;
-   //double RPM;
-   //int speed;
-   // int twist = 90;
-   // int vel = 0;
     
-    //while(1){
+    myservo.write(convet_steering_angle(twist,vel));
         
-        if (stringComplete) {
-            Serial.println(input_vel);
-            Serial.println(input_twist);
-            vel = input_vel.toInt();
-            twist = input_twist.toInt();
-            input_vel = "";
-            input_twist = "";
-            stringComplete = false;
-        }
-    
-        myservo.write(convet_steering_angle(twist,vel));
+    Setpoint = vel;
+    Input = calculate_rpm();
+    myPID.Compute();
         
-        Setpoint = vel;
-        Input = calculate_rpm();
-        myPID.Compute();
+    if (Output >= 0){
+        motorController.TurnLeft(Output);
+    }
+    else{
+        motorController.TurnRight(sqrt(Output * Output));
+    }
         
-        if (Output >= 0){
-            motorController.TurnLeft(Output);
-        }
-        else{
-            motorController.TurnRight(sqrt(Output * Output));
-        }
-        
-        if (debug == 1){
-            Serial.print("Output_PWM:");
-            Serial.print(Output);
-            Serial.print(",");
-            Serial.print("Input_RPM:");
-            Serial.print(Input);
-            Serial.print(",");
-            Serial.print("Setpoint:");
-            Serial.println(Setpoint);
-        }
-        
-        if (debug == 2){
-            Serial.print("Ticks:");
-            Serial.println(myEnc.read());
-        }
-        //motorController.Stop();
-        //motorController.Disable();
-    //}
+    nh.spinOnce();
 }
 
-void serialEvent() {
-    while (Serial.available()) {
-        // get the new byte:
-        char inChar = (char)Serial.read();
-        
-        if (inChar == '\n') {
-            Serial.println("string complete");
-            stringComplete = true;
-            break;
-        
-        if (inChar =='t'){
-            twist_flag = true;
-            break;
-        }
-        
-        if (twist_flag == false){
-            input_vel += inChar;
-        }
-        else{
-            input_twist += inChar;
-        }
-        // if the incoming character is a newline, set a flag so the main loop can
-        // do something about:
-        
-        }
-    }
-}
+
