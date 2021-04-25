@@ -20,8 +20,9 @@ double Kp=1, Ki=0.5, Kd=0.01;
 
 bool twist_flag = false;
 
-double wheel_base_length = 50;
-double wheel_base_width = 20;
+double wheel_base_length = 0.34;
+double wheel_base_width = 0.22;
+double wheel_circumfrance = 0.4273;
 
 int twist = 0; // degrees
 int vel = 0; // rpm
@@ -31,7 +32,7 @@ double y_pos = 0.0;
 double current_yaw = 0.0;
 
 
-BTS7960 motorController(6, 5, 10, 11); //en_l en_r l_pwm r_pwm
+BTS7960 motorController(6, 4, 5, 11); //en_l en_r l_pwm r_pwm
 Encoder myEnc(2, 3);
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 Servo myservo;
@@ -61,10 +62,18 @@ double calculate_rpm(){
    return RPM;
 }
 
-int convert_steering_angle(int twist, int vel){
-    int phi;
-    phi = arctan(twist/(vel/wheel_base_length)) + 90;
-    return phi;
+double convert_steering_angle(double twist, double vel){
+    double phi;
+    double phi_deg;
+    phi = atan(-twist/(vel/wheel_base_length));
+    phi_deg = (phi * 57296 / 1000) + 90;
+    return phi_deg;
+}
+
+double covert_vel_rpm(double vel){
+  double RPM; 
+  RPM = (vel / wheel_circumfrance) * 60;
+  return RPM;
 }
 
 void setup(){
