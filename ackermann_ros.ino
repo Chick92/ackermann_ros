@@ -135,14 +135,14 @@ void cmd_vel_cb(const geometry_msgs::Twist& cmd_vel_msg){
 void setup(){
 
     myservo.attach(9);
-	lights.attatch(10);
+	lights.attach(10);
 	
     myservo.write(90); // 57 = full left, 123 = full right, 90 = middle.
 	lights.write(0);
     
     nh.initNode();
     ros::Subscriber<geometry_msgs::Twist> sub("/cmd_vel", cmd_vel_cb);
-	Serial1.begin(115200);
+	  Serial1.begin(115200);
     nh.subscribe(sub);
 
 }
@@ -151,6 +151,6 @@ void setup(){
 void loop(){
     
     myservo.write(convert_steering_angle(twist,vel));
-	Serial1.println(vel);
+	  Serial1.println(vel);
     nh.spinOnce();
 }
